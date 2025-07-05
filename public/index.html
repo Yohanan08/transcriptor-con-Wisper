@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Transcriptor de Audio</title>
+</head>
+<body style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 2em;">
+  <h2>Transcriptor de Audio</h2>
+  <form id="uploadForm">
+    <input type="file" accept="audio/*" required /><br /><br />
+    <label>Idioma destino (ejemplo: hebrew, english, spanish):</label><br />
+    <input type="text" id="targetLanguage" value="hebrew" required /><br /><br />
+    <button type="submit">Transcribir y Descargar PDF</button>
+  </form>
+  <p id="status"></p>
+  <script>
+    document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fileInput = e.target.querySelector('input[type="file"]');
+      const language = document.getElementById('targetLanguage').value;
+      const file = fileInput.files[0];
+
+      if (!file) return;
+
+      document.getElementById('status').innerText = "Procesando...";
+
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const base64Audio = reader.result;
+        const response = await fetch('/api/transcribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ targetLanguage: language, audio: base64Audio })
+        });
+        if (response.ok) {
+          const blob = await response.blob();
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'transcription.pdf';
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          URL.revokeObjectURL(url);
+          document.getElementById('status').innerText = "¡Listo! PDF descargado.";
+        } else {
+          document.getElementById('status').innerText = "Error al procesar el audio.";
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+  </script>
+</body>
+</html>
